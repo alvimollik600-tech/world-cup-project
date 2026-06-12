@@ -1,0 +1,77 @@
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+    cors: { origin: "*" }
+});
+
+app.use(express.static("public"));
+
+const rooms = {};
+
+io.on("connection", (socket) => {
+
+    socket.on("join-room", ({ roomId, isAdmin }) => {
+        socket.join(roomId);
+        socket.roomId = roomId;
+
+        if (!rooms[roomId]) {
+            rooms[roomId] = { adminId: socket.id };
+        }
+
+        socket.isAdmin = isAdmin || false;
+
+        io.to(roomId).emit("room-update", {
+            adminId: rooms[roomId].adminId
+        });
+    });
+
+    // 🎥 video sync
+    socket.on("video-change", (url) => {
+        io.to(socket.roomId).emit("video-change", url);
+    });
+
+    socket.on("video-action", (data) => {
+        socket.to(socket.roomId).emit("video-action", data);
+    });
+
+    // 💬 chat
+    socket.on("chat-message", (msg) => {
+        io.to(socket.roomId).emit("chat-message", {
+            id: socket.id,
+            msg
+        });
+    });
+
+    // 🎤 voice join
+    socket.on("join-voice", (peerId) => {
+        socket.peerId = peerId;
+        socket.to(socket.roomId).emit("user-joined-voice", peerId);
+    });
+
+    // 🔇 MUTE (admin only)
+    socket.on("mute-user", (targetId) => {
+        const room = rooms[socket.roomId];
+        if (!room || room.adminId !== socket.id) return;
+
+        io.to(targetId).emit("force-mute");
+    });
+
+    // ❌ KICK (admin only)
+    socket.on("kick-user", (targetId) => {
+        const room = rooms[socket.roomId];
+        if (!room || room.adminId !== socket.id) return;
+
+        io.to(targetId).emit("kicked");
+        io.sockets.sockets.get(targetId)?.disconnect();
+    });
+
+});
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log("Server running on port", PORT);
+});

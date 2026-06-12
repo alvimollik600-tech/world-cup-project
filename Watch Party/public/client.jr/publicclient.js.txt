@@ -1,0 +1,98 @@
+const socket = io();
+let roomId;
+let myStream;
+let peer;
+let muted = false;
+
+// join room
+function joinRoom(isAdmin) {
+    roomId = document.getElementById("room").value;
+
+    socket.emit("join-room", {
+        roomId,
+        isAdmin
+    });
+}
+
+// 🎥 video
+function changeVideo() {
+    socket.emit("video-change", document.getElementById("videoLink").value);
+}
+
+socket.on("video-change", (url) => {
+    const v = document.getElementById("videoPlayer");
+    const f = document.getElementById("videoFrame");
+
+    v.style.display = "none";
+    f.style.display = "none";
+
+    if (url.endsWith(".mp4")) {
+        v.style.display = "block";
+        v.src = url;
+        v.play();
+    } else {
+        f.style.display = "block";
+        f.src = url;
+    }
+});
+
+// 💬 chat
+function sendMsg() {
+    socket.emit("chat-message", document.getElementById("msg").value);
+}
+
+socket.on("chat-message", (data) => {
+    document.getElementById("chat").innerHTML += `<p>${data.msg}</p>`;
+});
+
+// 🎤 voice
+async function startVoice() {
+    myStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+    peer = new Peer();
+
+    peer.on("open", (id) => {
+        socket.emit("join-voice", id);
+    });
+
+    peer.on("call", (call) => {
+        call.answer(myStream);
+        call.on("stream", (stream) => addAudio(stream));
+    });
+}
+
+socket.on("user-joined-voice", (id) => {
+    const call = peer.call(id, myStream);
+    call.on("stream", (stream) => addAudio(stream));
+});
+
+function addAudio(stream) {
+    const audio = document.createElement("audio");
+    audio.srcObject = stream;
+    audio.autoplay = true;
+    document.body.appendChild(audio);
+}
+
+// 🔇 mute
+function toggleMute() {
+    muted = !muted;
+    myStream.getAudioTracks()[0].enabled = !muted;
+}
+
+// 👑 admin controls
+function muteUser() {
+    socket.emit("mute-user", document.getElementById("targetId").value);
+}
+
+function kickUser() {
+    socket.emit("kick-user", document.getElementById("targetId").value);
+}
+
+socket.on("force-mute", () => {
+    myStream.getAudioTracks()[0].enabled = false;
+});
+
+socket.on("kicked", () => {
+    alert("You were kicked");
+    location.reload();
+});

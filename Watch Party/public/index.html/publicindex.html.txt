@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Watch Party</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h2>🎥 Watch Party</h2>
+
+<input id="room" placeholder="Room ID">
+<button onclick="joinRoom(true)">Join as Admin</button>
+<button onclick="joinRoom(false)">Join</button>
+
+<br><br>
+
+<input id="videoLink" placeholder="Video link">
+<button onclick="changeVideo()">Load Video</button>
+
+<br><br>
+
+<video id="videoPlayer" width="600" controls style="display:none;"></video>
+<iframe id="videoFrame" width="600" height="350" style="display:none;"></iframe>
+
+<hr>
+
+<h3>💬 Chat</h3>
+<div id="chat"></div>
+
+<input id="msg">
+<button onclick="sendMsg()">Send</button>
+
+<hr>
+
+<h3>🎤 Voice</h3>
+<button onclick="startVoice()">Join Voice</button>
+<button onclick="toggleMute()">Mute</button>
+
+<hr>
+
+<h3>👑 Admin</h3>
+<input id="targetId" placeholder="Socket ID">
+<button onclick="muteUser()">Mute</button>
+<button onclick="kickUser()">Kick</button>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+<script src="client.js"></script>
+
+</body>
+</html>
